@@ -74,6 +74,11 @@
 					}
 					app.globalData.userInfo = message
 					uni.setStorageSync('userInfo', message)
+					// 登录成功，链接websocket
+					const path = `wss://im.pltrue.top/im/connect?token=${app.globalData.userInfo.token}`
+					app.globalData.socketObj = new WebSocket(path, 10)
+					app.globalData.socketObj.initSocket()
+					// 跳转首页
 					uni.switchTab({
 						url: '/pages/home/home'
 					})
@@ -84,6 +89,13 @@
 			//如果需要兼容微信小程序，并且校验规则中含有方法等，只能通过setRules方法设置规则。
 			this.$refs.form1.setRules(this.rules)
 		},
+		onShow(){
+			if(app.globalData.userInfo.token){
+				uni.switchTab({
+					url: '/pages/home/home'
+				})
+			}
+		}
 	}
 </script>
 

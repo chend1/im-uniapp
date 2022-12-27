@@ -1,15 +1,29 @@
 <script>
+	import { getStorage } from './utils/storage.js'
+		import WebSocket from './utils/socket.js'
 	export default {
 		globalData: {
 			socketObj: {},
-			userInfo: {},
+			userInfo: getStorage('userInfo') || {},
 			selectSession: {}
 		},
 		onLaunch: function() {
 			console.log('App Launch')
 		},
 		onShow: function() {
-			console.log('App Show')
+			const app = getApp()
+			if (app.globalData.userInfo.token) {
+				if (app.globalData.socketObj.initSocket) {
+					// 如果sockt实例未连接
+					if (!app.globalData.socketObj.isConnect) {
+						app.globalData.socketObj.initSocket()
+					}
+				} else {
+					const path = `wss://im.pltrue.top/im/connect?token=${app.globalData.userInfo.token}`
+					app.globalData.socketObj = new WebSocket(path, 10)
+					app.globalData.socketObj.initSocket()
+				}
+			}
 		},
 		onHide: function() {
 			console.log('App Hide')

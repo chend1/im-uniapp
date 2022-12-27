@@ -37,25 +37,22 @@
 	import Head from '../../components/Head.vue'
 	import WebSocket from '../../utils/socket.js'
 	import {
-		sessionList
-	} from '../../api/session.js'
+		mapState
+	} from 'vuex'
 	export default {
 		components: {
 			Head
 		},
 		data() {
 			return {
-				sessionList: [],
 				sessionInfo: {}
 			};
 		},
+		computed: mapState({
+			// 从state中拿到数据 箭头函数可使代码更简练
+			sessionList: state => state.session.sessionList,
+		}),
 		methods: {
-			getSessionList() {
-				sessionList().then(res => {
-					console.log(res)
-					this.sessionList = res.data
-				})
-			},
 			sessionClick(session) {
 				this.sessionInfo = session
 				app.globalData.selectSession = session
@@ -65,23 +62,8 @@
 				})
 			}
 		},
-		onLoad() {
-			if (app.globalData.userInfo.token) {
-				if (app.globalData.socketObj.initSocket) {
-					// 如果sockt实例未连接
-					if (!app.globalData.socketObj.isConnect) {
-						app.globalData.socketObj.initSocket()
-					}
-				} else {
-					const path = `wss://im.pltrue.top/im/connect?token=${app.globalData.userInfo.token}`
-					app.globalData.socketObj = new WebSocket(path, 10)
-					app.globalData.socketObj.initSocket()
-				}
-			}
-		},
-		onShow() {
-			console.log(app.globalData.userInfo, app.globalData.socketObj)
-			this.getSessionList()
+		mounted(){
+			this.$store.dispatch('getSessionList')
 		}
 	}
 </script>
