@@ -1,11 +1,14 @@
 <script>
-	import { getStorage } from './utils/storage.js'
-		import WebSocket from './utils/socket.js'
+	import {
+		getStorage
+	} from './utils/storage.js'
+	import WebSocket from './utils/socket.js'
 	export default {
 		globalData: {
 			socketObj: {},
 			userInfo: getStorage('userInfo') || {},
-			selectSession: {}
+			selectSession: {},
+			selectUser: {}
 		},
 		onLaunch: function() {
 			console.log('App Launch')

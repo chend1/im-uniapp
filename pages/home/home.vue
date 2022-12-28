@@ -48,22 +48,48 @@
 				sessionInfo: {}
 			};
 		},
-		computed: mapState({
-			// 从state中拿到数据 箭头函数可使代码更简练
-			sessionList: state => state.session.sessionList,
-		}),
+		computed: {
+			...mapState({
+				sessionList: state => state.session.sessionList,
+			})
+		},
 		methods: {
 			sessionClick(session) {
 				this.sessionInfo = session
 				app.globalData.selectSession = session
-				const id = session.channel_type === 2 ? session.group_id : session.to_id
 				uni.navigateTo({
-					url: `/pages/chat/chat?id=${id}&name=${session.name}&type=${session.channel_type || 1}`
+					url: `/pages/chat/chat`
 				})
+			},
+			receiptMessage(res){
+				const time = new Date()
+				const message = JSON.parse((res.data))
+				const userInfo = uni.getStorageSync('userInfo')
+				const chatMsg = {
+					info: message.channel_type == 2 ? JSON.parse(message.data) : userInfo,
+					channel_type: message.channel_type,
+					time: message.send_time,
+					user_id: message.form_id,
+					id: time.getTime() + 1,
+					message: message.message,
+					msg_type: message.msg_type,
+					to_id: message.to_id,
+				}
+				this.$store.commit('changeChattingRecords', chatMsg)
+				this.$store.dispatch('changeSessionPoint', chatMsg)
 			}
 		},
-		mounted(){
+		mounted() {
 			this.$store.dispatch('getSessionList')
+		},
+		onLoad() {
+			// 监听事件  
+			uni.$off('message', this.receiptMessage)
+			uni.$on('message', this.receiptMessage)
+		},
+		onShow() {
+			this.sessionInfo = {}
+			app.globalData.selectSession = {}
 		}
 	}
 </script>
@@ -90,10 +116,20 @@
 					overflow: hidden;
 					background-color: azure;
 					border: 2rpx solid #eee;
+					position: relative;
 
 					img {
 						width: 100%;
 					}
+					// .point{
+					// 	width: 16rpx;
+					// 	height: 16rpx;
+					// 	border-radius: 50%;
+					// 	background-color: #ff0000;
+					// 	position: absolute;
+					// 	top: 0;
+					// 	left: 0;
+					// }
 				}
 
 				.content {

@@ -48,6 +48,9 @@ class webSocketClass {
         // 监听 WebSocket 接受到服务器的消息事件
         this.socketExamples.onMessage((res) => {
           // console.log('收到消息')
+					if(!res.data){
+						return
+					}
           uni.$emit('message', res)
         })
         // 监听 WebSocket 连接关闭事件

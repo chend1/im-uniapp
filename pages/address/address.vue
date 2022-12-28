@@ -3,7 +3,8 @@
 		<Head></Head>
 		<view class="container">
 			<view class="list">
-				<view class="li" v-for="(item, index) in addressList" :key="index" @click="sessionClick(item)">
+				<view class="li" :class="{active: addressInfo.id === item.id}" v-for="(item, index) in addressList"
+					:key="index" @click="addressClick(item)">
 					<view class="avatar">
 						<img :src="item.Users.avatar" alt="">
 					</view>
@@ -30,8 +31,18 @@
 		}),
 		data() {
 			return {
-
+				addressInfo: {}
 			};
+		},
+		methods: {
+			addressClick(address){
+				const app = getApp()
+				// this.addressInfo = address
+				app.globalData.selectUser = address
+				uni.navigateTo({
+					url: `/pages/details/details?id=${address.Users.id}&name=${address.Users.name}`
+				})
+			}
 		},
 		onShow() {
 			this.$store.dispatch('getFriendList')
@@ -46,12 +57,14 @@
 		box-sizing: border-box;
 		padding: 20rpx 0;
 		overflow-y: auto;
-		.list{
-			.li{
+
+		.list {
+			.li {
 				display: flex;
 				margin: 10rpx 0;
 				display: flex;
 				padding: 10rpx 30rpx;
+
 				.avatar {
 					width: 80rpx;
 					height: 80rpx;
@@ -59,18 +72,23 @@
 					overflow: hidden;
 					background-color: azure;
 					border: 2rpx solid #eee;
-				
+
 					img {
 						width: 100%;
 					}
 				}
-				.name{
+
+				.name {
 					flex: 1;
 					font-size: 28rpx;
 					line-height: 80rpx;
 					margin-left: 20rpx;
 					border-bottom: 1px solid #f9f9f9;
 				}
+			}
+
+			.active {
+				background-color: aliceblue;
 			}
 		}
 	}

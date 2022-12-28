@@ -11,7 +11,7 @@
 					fill="#8a8a8a" p-id="12292"></path>
 			</svg></view>
 		<view class="message">
-			<input class="msg-input" v-model="sendContent" />
+			<input class="msg-input" v-model="sendContent" @confirm="sendClick(1)" />
 		</view>
 		<view class="right">
 			<view class="small" v-if="!sendContent"><svg t="1672022899811" class="icon" viewBox="0 0 1024 1024"
@@ -76,31 +76,20 @@
 						this.sendContent = ''
 						return
 					}
-					// 聊天记录
-					const Users = {
-						avatar: selectSession.Users.avatar || '',
-						email: selectSession.Users.email || '',
-						id: selectSession.Users.id || -1,
-						name: selectSession.Users.name || '',
-					}
+					console.log(res)
 					const chatMsg = {
-						Users: Users,
+						info: userInfo,
 						channel_type: selectSession.channel_type,
-						created_at: res.send_time,
-						data: res.data,
-						form_id: res.form_id,
+						time: res.data.send_time,
+						user_id: res.data.form_id,
 						id: time.getTime() + 1,
-						is_read: 0,
-						msg: res.message,
-						msg_type: res.msg_type,
-						to_id: res.to_id,
-						status: 1,
+						message: res.data.message,
+						msg_type: res.data.msg_type,
+						to_id: res.data.to_id,
 					}
-					// const result = store.changeChattingRecords(chatMsg)
-					// result.then(() => {
-					// 	onScrollMsg()
-					// })
-					sendContent.value = ''
+					this.$store.commit('changeChattingRecords', chatMsg)
+					this.$store.dispatch('changeSessionPoint', chatMsg)
+					this.sendContent = ''
 				})
 			}
 		}

@@ -12,9 +12,9 @@
 			</view>
 		</view>
 		<view class="chat">
-			<scroll-view :scroll-top="0" scroll-y="true" class="scroll-Y" @scrolltoupper="scrollTop">
+			<scroll-view :scroll-top="scrollNum" scroll-y="true" class="scroll-Y" @scrolltoupper="scrollTop">
 				<view class="chat-item" :class="{own: item.user_id == userInfo.id}" v-for="item in chatList"
-					:key="item.id">
+					:key="item.id" :id="item.id">
 					<view class="time" v-if="item.isShowTime">
 						<view class="text">{{item.time}}</view>
 					</view>
@@ -23,11 +23,12 @@
 					</view>
 					<view class="item" v-if="item.msg_type !== 6">
 						<view class="img">
-							<img :src="item.info.avatar" alt="">
+							<img :src="item.info.avatar" alt="" v-if="item.user_id != userInfo.id">
+							<img :src="userInfo.avatar" alt="" v-if="item.user_id == userInfo.id">
 						</view>
 						<view class="content">
 							<view class="left">
-								<view class="name" v-if="type == 2">{{item.info.name}}</view>
+								<view class="name" v-if="chatInfo.channel_type == 2">{{item.info.name}}</view>
 								<view class="msg">
 									<view class="wrap" v-if="item.msg_type === 1">{{item.message}}</view>
 									<view class="audio" v-if="item.msg_type === 2">
@@ -41,6 +42,7 @@
 						</view>
 					</view>
 				</view>
+				<!-- <view class="bottom" :id="'bottom'+chatList.length"></view> -->
 			</scroll-view>
 		</view>
 		<view class="send-wrap">
@@ -55,77 +57,84 @@
 		chatMessage,
 		chatGroupMessage
 	} from '../../api/chat.js'
-	import { timestampChange } from '../../utils/index.js'
+	import {
+		timestampChange
+	} from '../../utils/index.js'
 	import Send from '../../components/Send.vue'
+	import {
+		mapState
+	} from 'vuex'
 	export default {
 		components: {
 			Send
 		},
 		data() {
 			return {
-				chatInfo: {
-					name: '',
-				},
+				chatInfo: {},
 				chatMessageList: [],
 				type: 1,
 				userInfo: {},
 				audioAction: {
 					method: 'pause'
-				}
+				},
+				scrollNum: 999999,
+				bottomId: ''
 			};
 		},
-		onLoad(option) {
-
-			this.chatInfo.name = option.name
+		async onShow() {
+			const chatInfo = app.globalData.selectSession
+			this.chatInfo = chatInfo
+			console.log(chatInfo)
+			this.userInfo = uni.getStorageSync('userInfo')
+			const id = chatInfo.channel_type === 2 ? chatInfo.group_id : chatInfo.to_id
 			const data = {
 				page: '',
 				pageSize: 20,
-				to_id: option.id,
+				to_id: id,
 			}
-			this.type = option.type
-			if (option.type == 1) {
+			if (chatInfo.channel_type == 1) {
 				// 私聊
-				chatMessage(data).then(res => {
-					console.log(res)
-					this.chatMessageList = res.data.list.map(item => {
-						const message = {}
-						message.id = item.id
-						message.msg_type = item.msg_type
-						message.message = item.msg
-						message.user_id = item.form_id
-						message.time = item.created_at
-						message.info = item.Users
-						return message
-					})
+				const res = await chatMessage(data)
+				this.chatMessageList = res.data.list.map(item => {
+					const message = {}
+					message.id = item.id
+					message.msg_type = item.msg_type
+					message.message = item.msg
+					message.user_id = item.form_id
+					message.time = item.created_at
+					message.info = item.Users
+					return message
 				})
+				setTimeout(() => {
+					this.scrollNum++
+				}, 100)
+				this.$store.commit('getRecorderList', this.chatMessageList)
 			} else {
 				// 群聊
-				chatGroupMessage(data).then(res => {
-					console.log(res)
-					this.chatMessageList = res.data.list.map(item => {
-						const message = {}
-						message.id = item.Id
-						message.msg_type = item.MsgType
-						message.message = item.Message
-						message.user_id = item.FormId
-						// console.log()
-						const time = new Date(item.SendTime * 1000)
-						message.time = timestampChange(time)
-						message.info = JSON.parse(item.Data)
-						return message
-					})
+				const res = await chatGroupMessage(data)
+				this.chatMessageList = res.data.list.map(item => {
+					const message = {}
+					message.id = item.Id
+					message.msg_type = item.MsgType
+					message.message = item.Message
+					message.user_id = item.FormId
+					// console.log()
+					const time = new Date(item.SendTime * 1000)
+					message.time = timestampChange(time)
+					message.info = JSON.parse(item.Data)
+					return message
 				})
+				setTimeout(() => {
+					this.scrollNum++
+				}, 100)
+				this.$store.commit('getRecorderList', this.chatMessageList)
 			}
-		},
-		onShow() {
-			this.userInfo = uni.getStorageSync('userInfo')
 		},
 		methods: {
 			scrollTop() {
 				console.log(123)
 			},
 			goBack() {
-				// uni.navigateBack()
 				uni.switchTab({
 					url: '/pages/home/home'
 				})
@@ -133,24 +142,14 @@
 		},
 		computed: {
 			chatList() {
-				console.log(this.chatMessageList)
-				const chatList = JSON.parse(JSON.stringify(this.chatMessageList))
-				if (!chatList[0]) {
-					return []
-				}
-				let timesStr = chatList[0].time
-				let sendTime = new Date(timesStr).getTime()
-				chatList.forEach((item, index) => {
-					if (index === 0) {
-						item.isShowTime = true
-					}
-					const timeMs = new Date(item.time).getTime()
-					if (timeMs - sendTime > 120 * 1000) {
-						item.isShowTime = true
-					}
-					sendTime = new Date(item.time).getTime()
-				})
-				return chatList
+				return this.$store.getters.chatList
+			}
+		},
+		watch: {
+			chatList(){
+				setTimeout(() => {
+					this.scrollNum += 1000
+				}, 60)
 			}
 		}
 	}
@@ -190,7 +189,8 @@
 				width: 100%;
 				padding-bottom: 30rpx;
 
-				.time,.invite {
+				.time,
+				.invite {
 					width: 100%;
 					font-size: 24rpx;
 					text-align: center;
@@ -227,6 +227,7 @@
 					display: flex;
 					justify-content: space-between;
 					margin-left: 20rpx;
+					overflow: hidden;
 
 					.left {
 						width: 80%;
@@ -247,6 +248,9 @@
 								background-color: aliceblue;
 								border-radius: 6rpx;
 								line-height: 50rpx;
+								// overflow-wrap: break-word; 
+								overflow-wrap: anywhere; 
+								text-align: left;
 							}
 
 							.audio {
@@ -276,9 +280,15 @@
 				}
 			}
 		}
-		.send-wrap{
+
+		.send-wrap {
 			width: 100%;
 			height: 100rpx;
 		}
+	}
+
+	.bottom {
+		width: 100%;
+		height: 1px;
 	}
 </style>
