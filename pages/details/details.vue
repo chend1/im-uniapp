@@ -37,7 +37,7 @@
 				</view>
 			</view>
 			<view class="tool">
-				<view class="send">
+				<view class="send" @click="sendMsgClick">
 					<u-icon name="chat" color="#666" size="22"></u-icon>
 					发消息
 				</view>
@@ -58,6 +58,12 @@
 			goBack() {
 				uni.switchTab({
 					url: '/pages/address/address'
+				})
+			},
+			async sendMsgClick(){
+				await this.$store.dispatch('addSessionList',this.friendInfo.Users.id)
+				uni.redirectTo({
+					url: '/pages/chat/chat'
 				})
 			}
 		},

@@ -35,14 +35,27 @@
 										{{item.message}}
 										<!-- <audio :src="item.message" :controls="true" :action="audioAction"></audio> -->
 									</view>
-									<view class="image" v-if="item.msg_type === 3">图片或文件</view>
-									<view class="file" v-if="item.msg_type === 4">文件</view>
+									<view class="image"
+										v-if="item.msg_type === 3 && getFileType(item.message)[0] === 'image'">
+										<img :src="item.message" alt="">
+									</view>
+									<view class="file" v-if="item.msg_type === 4">
+										<view class="file-name">
+											{{getFileName(item.message)}}
+										</view>
+										<view class="icon">
+											<view class="icon-l">图标</view>
+											<view class="icon-r">
+												{{getFileType(item.message)[1]}}
+											</view>
+										</view>
+									</view>
 								</view>
 							</view>
 						</view>
 					</view>
+
 				</view>
-				<!-- <view class="bottom" :id="'bottom'+chatList.length"></view> -->
 			</scroll-view>
 		</view>
 		<view class="send-wrap">
@@ -78,11 +91,18 @@
 					method: 'pause'
 				},
 				scrollNum: 999999,
-				bottomId: ''
+				bottomId: '',
+				pagingInfo: {
+					size: 20,
+					total: 0,
+					page: 1
+				},
+				isMore: false
 			};
 		},
 		async onShow() {
 			const chatInfo = app.globalData.selectSession
+			console.log(123, chatInfo)
 			this.chatInfo = chatInfo
 			console.log(chatInfo)
 			this.userInfo = uni.getStorageSync('userInfo')
@@ -95,7 +115,12 @@
 			if (chatInfo.channel_type == 1) {
 				// 私聊
 				const res = await chatMessage(data)
-				this.chatMessageList = res.data.list.map(item => {
+				console.log(res)
+				this.pagingInfo.page = 1
+				this.pagingInfo.size = res.data.mate.pageSize
+				this.pagingInfo.total = res.data.mate.total
+				const list = Array.isArray(res.data.list) ? res.data.list : []
+				this.chatMessageList = list.map(item => {
 					const message = {}
 					message.id = item.id
 					message.msg_type = item.msg_type
@@ -112,13 +137,16 @@
 			} else {
 				// 群聊
 				const res = await chatGroupMessage(data)
-				this.chatMessageList = res.data.list.map(item => {
+				this.pagingInfo.page = 1
+				this.pagingInfo.size = res.data.mate.pageSize
+				this.pagingInfo.total = res.data.mate.total
+				const list = Array.isArray(res.data.list) ? res.data.list : []
+				this.chatMessageList = list.map(item => {
 					const message = {}
 					message.id = item.Id
 					message.msg_type = item.MsgType
 					message.message = item.Message
 					message.user_id = item.FormId
-					// console.log()
 					const time = new Date(item.SendTime * 1000)
 					message.time = timestampChange(time)
 					message.info = JSON.parse(item.Data)
@@ -131,13 +159,80 @@
 			}
 		},
 		methods: {
-			scrollTop() {
-				console.log(123)
+			async scrollTop() {
+				console.log(this.pagingInfo)
+				if (this.pagingInfo.page * this.pagingInfo.size >= this.pagingInfo.total) {
+					return
+				}
+				const chatId = this.chatMessageList[0].id
+				this.isMore = true
+				if (this.chatInfo.channel_type == 1) {
+					const res = await chatMessage({
+						page: chatId,
+						pageSize: 20,
+						to_id: this.chatInfo.to_id,
+					})
+					let list = []
+					if (Array.isArray(res.data.list)) {
+						list = res.data.list
+					}
+					const chatMsgList = list.map(item => {
+						const message = {}
+						message.id = item.id
+						message.msg_type = item.msg_type
+						message.message = item.msg
+						message.user_id = item.form_id
+						message.time = item.created_at
+						message.info = item.Users
+						return message
+					})
+					this.chatMessageList = [...chatMsgList, ...this.chatMessageList]
+					this.pagingInfo.page++
+					this.$store.commit('getRecorderList', this.chatMessageList)
+				} else {
+					const res = await chatGroupMessage({
+						page: chatId,
+						pageSize: 20,
+						to_id: this.chatInfo.group_id,
+					})
+					let list = []
+					if (Array.isArray(res.data.list)) {
+						list = res.data.list
+					}
+					const chatMsgList = list.map(item => {
+						const message = {}
+						message.id = item.Id
+						message.msg_type = item.MsgType
+						message.message = item.Message
+						message.user_id = item.FormId
+						const time = new Date(item.SendTime * 1000)
+						message.time = timestampChange(time)
+						message.info = JSON.parse(item.Data)
+						return message
+					})
+					this.chatMessageList = [...chatMsgList, ...this.chatMessageList]
+					this.pagingInfo.page++
+					this.$store.commit('getRecorderList', this.chatMessageList)
+				}
 			},
 			goBack() {
 				uni.switchTab({
 					url: '/pages/home/home'
 				})
+			},
+			getFileType(url) {
+				const type = url.substring(url.lastIndexOf('.') + 1)
+				const imgType = ['gif', 'jpg', 'jpeg', 'png', 'svg', 'apng', 'webp']
+				if (imgType.indexOf(type) !== -1) {
+					// 图片
+					return ['image', type]
+				} else {
+					// 其他文件
+					return ['other', type]
+				}
+			},
+			getFileName(url) {
+				return url.substring(url.lastIndexOf('/') + 1)
 			}
 		},
 		computed: {
@@ -146,7 +241,11 @@
 			}
 		},
 		watch: {
-			chatList(){
+			chatList() {
+				if (this.isMore) {
+					this.isMore = false
+					return
+				}
 				setTimeout(() => {
 					this.scrollNum += 1000
 				}, 60)
@@ -249,7 +348,7 @@
 								border-radius: 6rpx;
 								line-height: 50rpx;
 								// overflow-wrap: break-word; 
-								overflow-wrap: anywhere; 
+								overflow-wrap: anywhere;
 								text-align: left;
 							}
 
@@ -258,6 +357,15 @@
 
 								audio {
 									width: 100%;
+								}
+							}
+
+							.image {
+								width: 100%;
+
+								img {
+									max-width: 100%;
+									max-height: 100%;
 								}
 							}
 						}
