@@ -7,7 +7,7 @@
 			<view class="middle">
 				{{chatInfo.name}}
 			</view>
-			<view class="right">
+			<view class="right" @click="infoClick">
 				<u-icon name="list-dot" color="#fff" size="20"></u-icon>
 			</view>
 		</view>
@@ -102,7 +102,6 @@
 		},
 		async onShow() {
 			const chatInfo = app.globalData.selectSession
-			console.log(123, chatInfo)
 			this.chatInfo = chatInfo
 			console.log(chatInfo)
 			this.userInfo = uni.getStorageSync('userInfo')
@@ -218,6 +217,12 @@
 			goBack() {
 				uni.switchTab({
 					url: '/pages/home/home'
+				})
+			},
+			// 详情点击
+			infoClick(){
+				uni.navigateTo({
+					url: '/pages/sessionInfo/sessionInfo'
 				})
 			},
 			getFileType(url) {

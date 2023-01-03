@@ -38,6 +38,14 @@
 				"navigationBarTitleText": "好友"
 			}
 
+		}, {
+			"path": "pages/sessionInfo/sessionInfo",
+			"style": {
+				"navigationStyle": "custom",
+				"navigationBarTitleText": "会话详情",
+				"enablePullDownRefresh": false
+			}
+
 		}
 	],
 	"globalStyle": {
